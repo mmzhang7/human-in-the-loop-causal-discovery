@@ -123,3 +123,151 @@ def suggest_missing_edges(
                 print(f"[add-missing] {src} -> {dst}")
 
     return updated_edges
+
+
+# ========== BATCH INTERVENTION FUNCTIONS ==========
+
+def batch_prune_indirect_edges(
+    edges: Set[Edge],
+    nodes: List[str],
+    llm: GeminiLLM,
+    descriptions: Dict[str, str] | None = None,
+    verbose: bool = True,
+    confidence_threshold: float = 0.0,
+) -> Set[Edge]:
+    """
+    Batch version: Remove edges that are indirect or implausible.
+    Processes all edges in one API call, reducing cost significantly.
+    
+    Args:
+        confidence_threshold: If > 0, edges with confidence below this are flagged
+                             for potential human review (currently just logged).
+    """
+    edges_list = list(edges)
+    
+    if not edges_list:
+        return set()
+    
+    # Batch verify all edges at once
+    verdicts = llm.batch_verify_edges_direct(
+        edges=edges_list,
+        nodes=nodes,
+        descriptions=descriptions,
+    )
+    
+    pruned_edges = set()
+    uncertain_edges = []
+    
+    for src, dst in edges_list:
+        verdict = verdicts.get((src, dst))
+        
+        if verdict is None:
+            # Edge wasn't in results, skip it
+            if verbose:
+                print(f"[warning] {src} -> {dst} not in batch results")
+            continue
+        
+        keep = verdict.get("keep", False)
+        confidence = verdict.get("confidence", 0.5)
+        
+        if keep:
+            pruned_edges.add((src, dst))
+            if verbose:
+                conf_str = f" (conf={confidence:.2f})" if confidence < 1.0 else ""
+                print(f"[keep] {src} -> {dst}{conf_str}")
+            
+            if confidence < confidence_threshold:
+                uncertain_edges.append((src, dst, confidence))
+        else:
+            mediators = verdict.get("mediators", [])
+            if verbose:
+                if mediators:
+                    print(f"[remove] {src} -> {dst} (mediators={mediators})")
+                else:
+                    print(f"[remove] {src} -> {dst}")
+    
+    if uncertain_edges and verbose:
+        print(f"\n[info] {len(uncertain_edges)} edges have low confidence:")
+        for src, dst, conf in uncertain_edges:
+            print(f"  {src} -> {dst} (confidence={conf:.2f})")
+    
+    return pruned_edges
+
+
+def batch_correct_edge_directions(
+    edges: Set[Edge],
+    nodes: List[str],
+    llm: GeminiLLM,
+    descriptions: Dict[str, str] | None = None,
+    verbose: bool = True,
+    confidence_threshold: float = 0.0,
+) -> Set[Edge]:
+    """
+    Batch version: Check direction for multiple edges at once.
+    Processes all edges in one API call.
+    
+    Args:
+        confidence_threshold: If > 0, edges with confidence below this are flagged
+                             for potential human review.
+    """
+    edges_list = list(edges)
+    
+    if not edges_list:
+        return set()
+    
+    verdicts = llm.batch_verify_edges_direction(
+        edges=edges_list,
+        nodes=nodes,
+        descriptions=descriptions,
+    )
+    
+    corrected_edges = set()
+    uncertain_edges = []
+    
+    for src, dst in edges_list:
+        verdict = verdicts.get((src, dst))
+        
+        if verdict is None:
+            if verbose:
+                print(f"[warning] {src} -> {dst} not in batch results")
+            continue
+        
+        action = verdict.get("action", "keep")
+        reason = verdict.get("reason", "")
+        confidence = verdict.get("confidence", 0.5)
+        
+        if action == "flip":
+            corrected_edges.add((dst, src))
+            if verbose:
+                conf_str = f" conf={confidence:.2f}" if confidence < 1.0 else ""
+                if reason:
+                    print(f"[flip] {src} -> {dst} => {dst} -> {src} ({reason},{conf_str})")
+                else:
+                    print(f"[flip] {src} -> {dst} => {dst} -> {src} ({conf_str})")
+        
+        elif action == "remove":
+            if verbose:
+                conf_str = f" conf={confidence:.2f}" if confidence < 1.0 else ""
+                if reason:
+                    print(f"[remove] {src} -> {dst} ({reason},{conf_str})")
+                else:
+                    print(f"[remove] {src} -> {dst} ({conf_str})")
+        
+        else:  # keep
+            corrected_edges.add((src, dst))
+            if verbose:
+                conf_str = f" conf={confidence:.2f}" if confidence < 1.0 else ""
+                if reason:
+                    print(f"[keep] {src} -> {dst} ({reason},{conf_str})")
+                else:
+                    print(f"[keep] {src} -> {dst} ({conf_str})")
+        
+        if confidence < confidence_threshold:
+            uncertain_edges.append((src, dst, action, confidence))
+    
+    if uncertain_edges and verbose:
+        print(f"\n[info] {len(uncertain_edges)} edges have low confidence:")
+        for src, dst, action, conf in uncertain_edges:
+            print(f"  {src} -> {dst} action={action} (confidence={conf:.2f})")
+    
+    return corrected_edges

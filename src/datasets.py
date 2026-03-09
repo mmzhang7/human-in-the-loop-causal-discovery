@@ -213,3 +213,72 @@ def load_asia_generated(n_samples: int = 2000, seed: int = 42) -> Dict:
             "descriptions": base["descriptions"],
             "true_edges": base["true_edges"],
         }
+    
+def load_sachs_generated(n_samples=2000, seed=42):
+    """
+    Generate synthetic data for the Sachs protein signaling network
+    using pgmpy and Conditional Probability Tables.
+    """
+
+    from pgmpy.models import DiscreteBayesianNetwork
+    from pgmpy.factors.discrete import TabularCPD
+    from pgmpy.sampling import BayesianModelSampling
+    import numpy as np
+
+    # Define the structure (edges)
+    edges = [
+        ("PKC", "PKA"), ("PKC", "pjnk"), ("PKC", "P38"), ("PKC", "Raf"),
+        ("PKA", "pjnk"), ("PKA", "P38"), ("PKA", "Raf"), ("PKA", "Mek"), ("PKA", "Erk"),
+        ("Raf", "Mek"), ("Mek", "Erk")
+    ]
+    
+    model = DiscreteBayesianNetwork(edges)
+
+    # Define CPTs (simplified to binary 0/1 for 'Inactive/Active')
+    # Root Node: PKC
+    cpd_pkc = TabularCPD('PKC', 2, [[0.5], [0.5]])
+    
+    # PKA depends on PKC
+    cpd_pka = TabularCPD('PKA', 2, [[0.8, 0.2], [0.2, 0.8]], evidence=['PKC'], evidence_card=[2])
+    
+    # Raf depends on PKC and PKA
+    cpd_raf = TabularCPD('Raf', 2, [[0.9, 0.5, 0.5, 0.1], [0.1, 0.5, 0.5, 0.9]], 
+                         evidence=['PKC', 'PKA'], evidence_card=[2, 2])
+    
+    # JNK depends on PKC and PKA
+    cpd_pjnk = TabularCPD('pjnk', 2, [[0.9, 0.5, 0.5, 0.1], [0.1, 0.5, 0.5, 0.9]], 
+                          evidence=['PKC', 'PKA'], evidence_card=[2, 2])
+    
+    # P38 depends on PKC and PKA
+    cpd_p38 = TabularCPD('P38', 2, [[0.9, 0.5, 0.5, 0.1], [0.1, 0.5, 0.5, 0.9]], 
+                         evidence=['PKC', 'PKA'], evidence_card=[2, 2])
+    
+    # Mek depends on Raf and PKA
+    cpd_mek = TabularCPD('Mek', 2, [[0.9, 0.5, 0.5, 0.1], [0.1, 0.5, 0.5, 0.9]], 
+                         evidence=['Raf', 'PKA'], evidence_card=[2, 2])
+    
+    # Erk depends on Mek and PKA
+    cpd_erk = TabularCPD('Erk', 2, [[0.9, 0.5, 0.5, 0.1], [0.1, 0.5, 0.5, 0.9]], 
+                         evidence=['Mek', 'PKA'], evidence_card=[2, 2])
+
+    model.add_cpds(cpd_pkc, cpd_pka, cpd_raf, cpd_pjnk, cpd_p38, cpd_mek, cpd_erk)
+    
+    # Generate data
+    sampler = BayesianModelSampling(model)
+    data = sampler.forward_sample(size=n_samples, seed=seed, show_progress=False)
+
+    return {
+        "name": f"sachs_{n_samples}",
+        "nodes": list(model.nodes()),
+        "descriptions": {
+            "PKC": "Protein Kinase C",
+            "PKA": "Protein Kinase A",
+            "P38": "p38 mitogen-activated protein kinase",
+            "pjnk": "c-Jun N-terminal kinase",
+            "Raf": "Rapidly Accelerated Fibrosarcoma kinase",
+            "Mek": "Mitogen-activated protein kinase kinase",
+            "Erk": "Extracellular signal-regulated kinase"
+        },
+        "true_edges": set(edges),
+        "data": data
+    }

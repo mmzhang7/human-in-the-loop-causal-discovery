@@ -1,0 +1,89 @@
+{
+  "dataset": "asia_generated_2000",
+  "method": "hitl_level_2_uncertainty_threshold_0.7",
+  "n_true_edges": 8,
+  "n_pred_edges": 8,
+  "pred_edges": [
+    [
+      "Bronchitis",
+      "Dyspnea"
+    ],
+    [
+      "LungCancer",
+      "Dyspnea"
+    ],
+    [
+      "LungCancer",
+      "XRay"
+    ],
+    [
+      "Smoking",
+      "Bronchitis"
+    ],
+    [
+      "Smoking",
+      "LungCancer"
+    ],
+    [
+      "Tuberculosis",
+      "Dyspnea"
+    ],
+    [
+      "Tuberculosis",
+      "XRay"
+    ],
+    [
+      "VisitAsia",
+      "Tuberculosis"
+    ]
+  ],
+  "true_edges": [
+    [
+      "Bronchitis",
+      "Dyspnea"
+    ],
+    [
+      "LungCancer",
+      "Dyspnea"
+    ],
+    [
+      "LungCancer",
+      "XRay"
+    ],
+    [
+      "Smoking",
+      "Bronchitis"
+    ],
+    [
+      "Smoking",
+      "LungCancer"
+    ],
+    [
+      "Tuberculosis",
+      "Dyspnea"
+    ],
+    [
+      "Tuberculosis",
+      "XRay"
+    ],
+    [
+      "VisitAsia",
+      "Tuberculosis"
+    ]
+  ],
+  "fp_edges": [],
+  "fn_edges": [],
+  "f1": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 8.0,
+    "fp": 0.0,
+    "fn": 0.0
+  },
+  "shd": 0,
+  "llm_calls": 0,
+  "cache_hits": 3,
+  "human_interventions": 0,
+  "total_api_calls": 0
+}
