@@ -4,26 +4,26 @@ import re
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+from collections import deque
 
 # load .env automatically so small scripts work too
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
 except Exception:
     pass
 
 from google import genai
-from openai import OpenAI
 
 from .cache import DiskCache
+
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _extract_json(text: str) -> Dict[str, Any]:
     """
-    Parse a JSON object from LLM output.
+    Parse a JSON object from Gemini output.
     Handles markdown fences, extra text, and partial JSON cases.
     """
     if text is None:
@@ -78,7 +78,7 @@ class GeminiLLM:
 
     def __init__(
         self,
-        model: str = "gemini-1.5-flash",
+        model: str = "gemini-2.5-flash",
         cache_dir: str = ".cache_gemini",
         temperature: float = 0.0,
         max_output_tokens: int = 8192,
@@ -95,6 +95,8 @@ class GeminiLLM:
 
         self.cache = DiskCache(cache_dir)
         self.usage = LLMUsage()
+        self.requests_per_minute = 10
+        self.call_timestamps = deque(maxlen=self.requests_per_minute)
 
     def _rules(self) -> str:
         return (
@@ -106,14 +108,35 @@ class GeminiLLM:
             "If unsure, return an empty list.\n"
         )
 
-    def _call_json(
-        self, prompt: str, cache_key: str, retries: int = 10
-    ) -> Dict[str, Any]:
-        """Call Gemini and return parsed JSON."""
+    def _call_json(self, prompt: str, cache_key: str, retries: int = 10) -> Dict[str, Any]:
+        """
+        Call Gemini and return parsed JSON.
+
+        - uses disk cache first
+        - retries on parse errors
+        - retries on 429 / RESOURCE_EXHAUSTED
+        """
         cached = self.cache.get(cache_key)
         if cached is not None:
             self.usage.cache_hits += 1
             return cached
+
+        # ==========================================
+        # NEW: Check our proactive rate limit first!
+        # ==========================================
+        if len(self.call_timestamps) == self.requests_per_minute:
+            oldest_call = self.call_timestamps[0]
+            elapsed = time.time() - oldest_call
+            
+            if elapsed < 60.0:
+                sleep_time = 60.0 - elapsed
+                print(f"\n[throttle] Reached {self.requests_per_minute} calls/min.")
+                print(f"[throttle] Proactively pausing for {sleep_time:.1f} seconds...")
+                time.sleep(sleep_time)
+
+        # Record the timestamp of this new call
+        self.call_timestamps.append(time.time())
+        # ==========================================
 
         last_err: Optional[Exception] = None
         retry_suffixes = [
@@ -139,9 +162,7 @@ class GeminiLLM:
         for attempt in range(retries):
             try:
                 self.usage.calls += 1
-                tightened_prompt = (
-                    prompt + retry_suffixes[min(attempt, len(retry_suffixes) - 1)]
-                )
+                tightened_prompt = prompt + retry_suffixes[min(attempt, len(retry_suffixes) - 1)]
 
                 resp = self.client.models.generate_content(
                     model=self.model,
@@ -169,12 +190,10 @@ class GeminiLLM:
 
         raise RuntimeError(f"Gemini failed after retries: {last_err}")
 
-    # ==========================================
-    # CAUSAL DISCOVERY METHODS
-    # ==========================================
-
     def get_root_nodes(
-        self, nodes: List[str], descriptions: Optional[Dict[str, str]] = None
+        self,
+        nodes: List[str],
+        descriptions: Optional[Dict[str, str]] = None,
     ) -> List[str]:
         desc_block = ""
         if descriptions:
@@ -191,14 +210,23 @@ class GeminiLLM:
 
         key = self.cache.key_for(
             "roots",
-            {"model": self.model, "nodes": nodes, "descriptions": bool(descriptions)},
+            {
+                "model": self.model,
+                "nodes": nodes,
+                "descriptions": bool(descriptions),
+            },
         )
+
         data = self._call_json(prompt, key)
         roots = data.get("roots", [])
-        return [r for r in roots if isinstance(r, str) and r in nodes][:5]
+        roots = [r for r in roots if isinstance(r, str) and r in nodes]
+        return roots[:5]
 
     def get_children(
-        self, node: str, nodes: List[str], descriptions: Optional[Dict[str, str]] = None
+        self,
+        node: str,
+        nodes: List[str],
+        descriptions: Optional[Dict[str, str]] = None,
     ) -> List[str]:
         desc_block = ""
         if descriptions:
@@ -223,11 +251,152 @@ class GeminiLLM:
                 "descriptions": bool(descriptions),
             },
         )
+
         data = self._call_json(prompt, key)
         children = data.get("children", [])
-        return [c for c in children if isinstance(c, str) and c in nodes and c != node][
-            :8
-        ]
+        children = [c for c in children if isinstance(c, str) and c in nodes and c != node]
+        return children[:8]
+
+    def verify_edge_direct(
+        self,
+        src: str,
+        dst: str,
+        nodes: List[str],
+        descriptions: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Verify whether src -> dst is a direct causal edge.
+        """
+        if src not in nodes or dst not in nodes or src == dst:
+            return {"keep": False, "mediators": [], "reason": "invalid variables"}
+
+        desc_block = ""
+        if descriptions:
+            pairs = [f"- {k}: {descriptions.get(k, '')}" for k in nodes]
+            desc_block = "\nVARIABLE DESCRIPTIONS:\n" + "\n".join(pairs) + "\n"
+
+        prompt = (
+            self._rules()
+            + "\nTASK: Decide if the edge is DIRECT (not explained by a mediator among the variables).\n"
+            + f"EDGE CANDIDATE: '{src}' -> '{dst}'\n"
+            + 'Return EXACTLY one JSON object (no Markdown): {"keep": true, "mediators": ["Var"], "reason": "one short sentence", "confidence": 0.9}'
+            + "\n\nGuidelines:\n"
+            + "- keep=true ONLY if src is a direct cause of dst given the listed variables.\n"
+            + "- If the effect is indirect, set keep=false and list 0-3 mediators.\n"
+            + "- confidence: float 0.0-1.0 indicating certainty of your decision.\n"
+            + "- If unsure, set keep=false and lower confidence.\n"
+            + f"\nVARIABLES:\n{nodes}\n"
+            + desc_block
+        )
+
+        key = self.cache.key_for(
+            "verify_edge_direct",
+            {
+                "model": self.model,
+                "src": src,
+                "dst": dst,
+                "nodes": nodes,
+                "descriptions": bool(descriptions),
+            },
+        )
+
+        data = self._call_json(prompt, key)
+
+        keep = bool(data.get("keep", False))
+
+        mediators = data.get("mediators", [])
+        if not isinstance(mediators, list):
+            mediators = []
+        mediators = [
+            m for m in mediators
+            if isinstance(m, str) and m in nodes and m not in (src, dst)
+        ][:3]
+
+        reason = data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        reason = reason.strip()[:180]
+
+        confidence = data.get("confidence", 0.5)
+        if not isinstance(confidence, (int, float)):
+            confidence = 0.5
+        confidence = max(0.0, min(1.0, float(confidence)))
+
+        return {
+            "keep": keep,
+            "mediators": mediators,
+            "reason": reason,
+            "confidence": confidence,
+        }
+
+    def verify_edge_direction(
+        self,
+        src: str,
+        dst: str,
+        nodes: List[str],
+        descriptions: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Decide whether an edge should be kept, flipped, or removed.
+        """
+        if src not in nodes or dst not in nodes or src == dst:
+            return {"action": "remove", "reason": "invalid variables"}
+
+        desc_block = ""
+        if descriptions:
+            pairs = [f"- {k}: {descriptions.get(k, '')}" for k in nodes]
+            desc_block = "\nVARIABLE DESCRIPTIONS:\n" + "\n".join(pairs) + "\n"
+
+        prompt = (
+            self._rules()
+            + "\nTASK: Decide whether the direction of the candidate edge is correct.\n"
+            + f"CANDIDATE EDGE: '{src}' -> '{dst}'\n"
+            + 'Return EXACTLY one JSON object (no Markdown): {"action": "keep", "reason": "one short sentence", "confidence": 0.9}'
+            + "\n\nAllowed actions:\n"
+            + "- keep: if src -> dst is the more plausible direction\n"
+            + "- flip: if dst -> src is more plausible\n"
+            + "- remove: if neither direction is a good direct causal edge\n"
+            + "- confidence: float 0.0-1.0 indicating certainty of your decision.\n"
+            + "- If unsure, choose remove and set lower confidence.\n"
+            + f"\nVARIABLES:\n{nodes}\n"
+            + desc_block
+        )
+
+        key = self.cache.key_for(
+            "verify_edge_direction",
+            {
+                "model": self.model,
+                "src": src,
+                "dst": dst,
+                "nodes": nodes,
+                "descriptions": bool(descriptions),
+            },
+        )
+
+        data = self._call_json(prompt, key)
+
+        action = data.get("action", "remove")
+        if not isinstance(action, str):
+            action = "remove"
+        action = action.strip().lower()
+        if action not in {"keep", "flip", "remove"}:
+            action = "remove"
+
+        reason = data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        reason = reason.strip()[:180]
+
+        confidence = data.get("confidence", 0.5)
+        if not isinstance(confidence, (int, float)):
+            confidence = 0.5
+        confidence = max(0.0, min(1.0, float(confidence)))
+
+        return {
+            "action": action,
+            "reason": reason,
+            "confidence": confidence,
+        }
 
     def suggest_missing_edges(
         self,
@@ -236,6 +405,9 @@ class GeminiLLM:
         descriptions: Optional[Dict[str, str]] = None,
         max_edges: int = 5,
     ) -> Dict[str, Any]:
+        """
+        Suggest a small number of missing direct causal edges.
+        """
         desc_block = ""
         if descriptions:
             pairs = [f"- {k}: {descriptions.get(k, '')}" for k in nodes]
@@ -263,6 +435,7 @@ class GeminiLLM:
                 "max_edges": max_edges,
             },
         )
+
         data = self._call_json(prompt, key)
 
         suggested = data.get("suggested_edges", [])
@@ -275,6 +448,7 @@ class GeminiLLM:
         for edge in suggested:
             if not isinstance(edge, list) or len(edge) != 2:
                 continue
+
             src, dst = edge
             if not isinstance(src, str) or not isinstance(dst, str):
                 continue
@@ -282,14 +456,22 @@ class GeminiLLM:
                 continue
             if (src, dst) in current_edge_set:
                 continue
+
             cleaned.append((src, dst))
 
+        cleaned = cleaned[:max_edges]
+
+        reason = data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        reason = reason.strip()[:180]
+
         return {
-            "suggested_edges": cleaned[:max_edges],
-            "reason": str(data.get("reason", ""))[:180],
+            "suggested_edges": cleaned,
+            "reason": reason,
         }
 
-    # ========== BATCH METHODS ==========
+    # ========== BATCH METHODS FOR EFFICIENCY ==========
 
     def batch_get_children(
         self,
@@ -297,6 +479,10 @@ class GeminiLLM:
         candidate_nodes: List[str],
         descriptions: Optional[Dict[str, str]] = None,
     ) -> List[str]:
+        """
+        Batch version: Ask which variables from candidate_nodes are DIRECT effects of parent_node.
+        Reduces API calls by consolidating the query.
+        """
         desc_block = ""
         if descriptions:
             pairs = [f"- {k}: {descriptions.get(k, '')}" for k in candidate_nodes]
@@ -321,13 +507,14 @@ class GeminiLLM:
                 "descriptions": bool(descriptions),
             },
         )
+
         data = self._call_json(prompt, key)
         children = data.get("children", [])
-        return [
-            c
-            for c in children
+        children = [
+            c for c in children
             if isinstance(c, str) and c in candidate_nodes and c != parent_node
-        ][:8]
+        ]
+        return children[:8]
 
     def batch_verify_edges_direct(
         self,
@@ -335,8 +522,13 @@ class GeminiLLM:
         nodes: List[str],
         descriptions: Optional[Dict[str, str]] = None,
     ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """
+        Batch verify multiple edges at once to determine if they are direct.
+        Returns a dict mapping (src, dst) -> {keep: bool, mediators: [...], reason: str, confidence: float}
+        """
         if not edges:
             return {}
+
         desc_block = ""
         if descriptions:
             pairs = [f"- {k}: {descriptions.get(k, '')}" for k in nodes]
@@ -367,31 +559,53 @@ class GeminiLLM:
                 "descriptions": bool(descriptions),
             },
         )
+
         data = self._call_json(prompt, key)
 
         results = {}
-        for item in data.get("results", []):
+        raw_results = data.get("results", [])
+
+        for item in raw_results:
             if not isinstance(item, dict):
                 continue
+
             edge_raw = item.get("edge")
             if not isinstance(edge_raw, list) or len(edge_raw) != 2:
                 continue
+
             src, dst = edge_raw[0], edge_raw[1]
-            if src not in nodes or dst not in nodes:
+            if not isinstance(src, str) or not isinstance(dst, str):
                 continue
 
+            edge_key = (src, dst)
+
+            keep = bool(item.get("keep", False))
+
+            mediators = item.get("mediators", [])
+            if not isinstance(mediators, list):
+                mediators = []
             mediators = [
-                m
-                for m in item.get("mediators", [])
+                m for m in mediators
                 if isinstance(m, str) and m in nodes and m not in (src, dst)
             ][:3]
 
-            results[(src, dst)] = {
-                "keep": bool(item.get("keep", False)),
+            reason = item.get("reason", "")
+            if not isinstance(reason, str):
+                reason = ""
+            reason = reason.strip()[:180]
+
+            confidence = item.get("confidence", 0.5)
+            if not isinstance(confidence, (int, float)):
+                confidence = 0.5
+            confidence = max(0.0, min(1.0, float(confidence)))
+
+            results[edge_key] = {
+                "keep": keep,
                 "mediators": mediators,
-                "reason": str(item.get("reason", ""))[:180],
-                "confidence": max(0.0, min(1.0, float(item.get("confidence", 0.5)))),
+                "reason": reason,
+                "confidence": confidence,
             }
+
         return results
 
     def batch_verify_edges_direction(
@@ -400,8 +614,13 @@ class GeminiLLM:
         nodes: List[str],
         descriptions: Optional[Dict[str, str]] = None,
     ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """
+        Batch verify edge directions.
+        Returns a dict mapping (src, dst) -> {action: "keep"|"flip"|"remove", reason: str, confidence: float}
+        """
         if not edges:
             return {}
+
         desc_block = ""
         if descriptions:
             pairs = [f"- {k}: {descriptions.get(k, '')}" for k in nodes]
@@ -431,93 +650,47 @@ class GeminiLLM:
                 "descriptions": bool(descriptions),
             },
         )
+
         data = self._call_json(prompt, key)
 
         results = {}
-        for item in data.get("results", []):
+        raw_results = data.get("results", [])
+
+        for item in raw_results:
             if not isinstance(item, dict):
                 continue
+
             edge_raw = item.get("edge")
             if not isinstance(edge_raw, list) or len(edge_raw) != 2:
                 continue
+
             src, dst = edge_raw[0], edge_raw[1]
-            if src not in nodes or dst not in nodes:
+            if not isinstance(src, str) or not isinstance(dst, str):
                 continue
 
-            action = str(item.get("action", "remove")).strip().lower()
+            edge_key = (src, dst)
+
+            action = item.get("action", "remove")
+            if not isinstance(action, str):
+                action = "remove"
+            action = action.strip().lower()
             if action not in {"keep", "flip", "remove"}:
                 action = "remove"
 
-            results[(src, dst)] = {
+            reason = item.get("reason", "")
+            if not isinstance(reason, str):
+                reason = ""
+            reason = reason.strip()[:180]
+
+            confidence = item.get("confidence", 0.5)
+            if not isinstance(confidence, (int, float)):
+                confidence = 0.5
+            confidence = max(0.0, min(1.0, float(confidence)))
+
+            results[edge_key] = {
                 "action": action,
-                "reason": str(item.get("reason", ""))[:180],
-                "confidence": max(0.0, min(1.0, float(item.get("confidence", 0.5)))),
+                "reason": reason,
+                "confidence": confidence,
             }
+
         return results
-
-
-class OpenRouterLLM(GeminiLLM):
-    """
-    Drop-in replacement for GeminiLLM that uses OpenRouter (DeepSeek, etc.)
-    Inherits all the batching methods automatically!
-    """
-
-    def __init__(
-        self,
-        model: str = "microsoft/mai-ds-r1:free",
-        cache_dir: str = ".cache_openrouter",
-        temperature: float = 0.0,
-        max_output_tokens: int = 8192,
-        api_key_env: str = "OPENROUTER_API_KEY",
-    ):
-        api_key = os.getenv(api_key_env)
-        if not api_key:
-            raise RuntimeError(f"Missing {api_key_env}. Export it in your shell.")
-
-        # Point the OpenAI client at OpenRouter's URL
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-            timeout=180.0,  # <--- NEW: Wait up to 3 minutes for DeepSeek to think!
-        )
-        self.model = model
-        self.temperature = temperature
-        self.max_output_tokens = max_output_tokens
-
-        self.cache = DiskCache(cache_dir)
-        self.usage = LLMUsage()
-
-    def _call_json(
-        self, prompt: str, cache_key: str, retries: int = 10
-    ) -> Dict[str, Any]:
-        """Override the API call to use OpenRouter instead of Gemini."""
-        cached = self.cache.get(cache_key)
-        if cached is not None:
-            self.usage.cache_hits += 1
-            return cached
-
-        last_err = None
-
-        for attempt in range(retries):
-            try:
-                self.usage.calls += 1
-
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=self.temperature,
-                    max_tokens=self.max_output_tokens,
-                )
-
-                text = response.choices[0].message.content
-                data = _extract_json(text)  # Naturally ignores <think> tags!
-
-                self.cache.set(cache_key, data)
-                return data
-
-            except Exception as e:
-                last_err = e
-                print(f"[OpenRouter Error] Attempt {attempt+1} failed: {e}")
-                time.sleep(2.0 * (attempt + 1))
-
-        raise RuntimeError(f"OpenRouter failed after retries: {last_err}")

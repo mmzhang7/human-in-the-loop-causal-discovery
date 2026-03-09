@@ -1,0 +1,25 @@
+{
+  "reason": "These edges represent direct causal links based on common medical knowledge.",
+  "suggested_edges": [
+    [
+      "VisitAsia",
+      "Tuberculosis"
+    ],
+    [
+      "Smoking",
+      "Dyspnea"
+    ],
+    [
+      "Tuberculosis",
+      "Dyspnea"
+    ],
+    [
+      "Tuberculosis",
+      "Bronchitis"
+    ],
+    [
+      "Bronchitis",
+      "XRay"
+    ]
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "reason": "These edges represent common activation of stress-response pathways and feedback regulation of upstream kinases.",
+  "suggested_edges": [
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Erk",
+      "PKA"
+    ],
+    [
+      "Erk",
+      "PKC"
+    ]
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Tuberculosis",
+        "XRay"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Tuberculosis directly causes visible abnormalities on a chest X-ray."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "Smoking"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Smoking causes LungCancer, not the reverse."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Bronchitis",
+        "Smoking"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Smoking causes Bronchitis, not the reverse."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "Bronchitis",
+        "Dyspnea"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Bronchitis directly causes inflammation that can lead to shortness of breath."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "LungCancer",
+        "Dyspnea"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Lung cancer directly impairs lung function, leading to shortness of breath."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "XRay"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Lung cancer directly causes visible abnormalities on a chest X-ray."
+    }
+  ]
+}

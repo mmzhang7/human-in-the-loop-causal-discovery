@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "confidence": 0.9,
+      "edge": [
+        "Bronchitis",
+        "Dyspnea"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Bronchitis directly inflames airways, leading to shortness of breath."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "Bronchitis",
+        "Smoking"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Smoking causes Bronchitis, not the other way around."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "LungCancer",
+        "Dyspnea"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Lung cancer can directly impair respiratory function, causing shortness of breath."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "LungCancer",
+        "Smoking"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Smoking is a major cause of LungCancer, not the reverse."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "LungCancer",
+        "XRay"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Lung cancer often presents with visible abnormalities on a chest X-ray."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "Tuberculosis",
+        "XRay"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Tuberculosis infection causes characteristic findings visible on a chest X-ray."
+    }
+  ]
+}

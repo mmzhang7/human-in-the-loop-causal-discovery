@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Tuberculosis",
+        "XRay"
+      ],
+      "reason": "Tuberculosis causes abnormalities detectable by an X-ray."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "XRay"
+      ],
+      "reason": "Lung cancer causes abnormalities detectable by an X-ray."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Bronchitis",
+        "Dyspnea"
+      ],
+      "reason": "Bronchitis can cause inflammation leading to shortness of breath."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "Dyspnea"
+      ],
+      "reason": "Lung cancer can impair lung function, causing shortness of breath."
+    }
+  ]
+}

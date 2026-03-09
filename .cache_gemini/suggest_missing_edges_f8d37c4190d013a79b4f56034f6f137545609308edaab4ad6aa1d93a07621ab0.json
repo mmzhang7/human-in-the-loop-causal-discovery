@@ -1,0 +1,25 @@
+{
+  "reason": "These edges represent direct causal links between risk factors and diseases, or diseases and their common symptoms/findings.",
+  "suggested_edges": [
+    [
+      "VisitAsia",
+      "Tuberculosis"
+    ],
+    [
+      "Smoking",
+      "LungCancer"
+    ],
+    [
+      "Smoking",
+      "Bronchitis"
+    ],
+    [
+      "Tuberculosis",
+      "Dyspnea"
+    ],
+    [
+      "Bronchitis",
+      "XRay"
+    ]
+  ]
+}

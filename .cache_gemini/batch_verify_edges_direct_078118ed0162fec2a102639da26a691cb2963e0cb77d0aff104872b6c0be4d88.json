@@ -1,0 +1,109 @@
+{
+  "results": [
+    {
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "Mek"
+      ],
+      "keep": false,
+      "mediators": [
+        "Raf"
+      ],
+      "reason": "PKA typically regulates Mek activity indirectly through Raf."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Mek",
+        "Erk"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Mek directly phosphorylates and activates Erk in the canonical MAPK pathway."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "PKA",
+        "pjnk"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "PKA's influence on pjnk is typically indirect, involving multiple upstream signaling components not listed."
+    },
+    {
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "Erk"
+      ],
+      "keep": false,
+      "mediators": [
+        "Raf",
+        "Mek"
+      ],
+      "reason": "PKA activates Erk indirectly through the Raf-Mek cascade."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "PKC",
+        "Raf"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "PKC directly phosphorylates and activates Raf."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "PKA",
+        "P38"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "PKA's regulation of P38 is typically indirect, involving upstream kinases or adaptors not listed."
+    },
+    {
+      "confidence": 0.8,
+      "edge": [
+        "pjnk",
+        "PKC"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Direct activation of PKC by pjnk is not a canonical signaling event."
+    },
+    {
+      "confidence": 0.8,
+      "edge": [
+        "P38",
+        "PKC"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "Direct activation of PKC by P38 is not a canonical signaling event."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Raf",
+        "Mek"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Raf directly phosphorylates and activates Mek in the canonical MAPK pathway."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "PKA",
+        "Raf"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "PKA directly phosphorylates and regulates Raf activity."
+    }
+  ]
+}

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from .baseline_bfs import build_graph_bfs
 from .causal_baseline import run_causal_baseline
-from .datasets import load_asia_generated, load_asia_placeholder, load_toy
+from .datasets import load_asia_generated, load_asia_placeholder, load_toy, load_sachs_generated
 from .intervention import (
     prune_indirect_edges,
     correct_edge_directions,
@@ -15,7 +15,7 @@ from .intervention import (
     batch_prune_indirect_edges,
     batch_correct_edge_directions,
 )
-from .llm_interface import GeminiLLM, OpenRouterLLM
+from .llm_interface import GeminiLLM
 from .logger import RunLogger
 from .metrics import edge_f1, shd_directed
 
@@ -58,7 +58,7 @@ def summarize_result(
 
 
 def run_bfs_baseline(dataset: Dict) -> Dict:
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
     logger = RunLogger(verbose=True)
 
     nodes = dataset["nodes"]
@@ -126,7 +126,7 @@ def run_standard_plus_intervention(dataset: Dict) -> Dict:
 
 
 def run_standard_plus_two_interventions(dataset: Dict) -> Dict:
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -160,9 +160,8 @@ def run_standard_plus_two_interventions(dataset: Dict) -> Dict:
         human_interventions=llm.usage.human_interventions,
     )
 
-
 def run_standard_plus_three_interventions(dataset: Dict) -> Dict:
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -208,13 +207,12 @@ def run_standard_plus_three_interventions(dataset: Dict) -> Dict:
 
 # ========== BATCH PROCESSING METHODS (5-10x API REDUCTION) ==========
 
-
 def run_batch_baseline_plus_two_interventions(dataset: Dict) -> Dict:
     """
     Uses batch API calls to reduce LLM costs by 5-10x.
     Processes pruning and direction correction in batch mode.
     """
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -255,7 +253,7 @@ def run_batch_baseline_plus_three_interventions(dataset: Dict) -> Dict:
     """
     Full batch pipeline: baseline + batch pruning + batch direction + missing edges.
     """
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -301,7 +299,6 @@ def run_batch_baseline_plus_three_interventions(dataset: Dict) -> Dict:
 
 # ========== HITL TIERS ==========
 
-
 def run_hitl_level_0_pure_llm(dataset: Dict) -> Dict:
     """
     HITL Level 0: Pure LLM baseline (no human intervention).
@@ -310,19 +307,17 @@ def run_hitl_level_0_pure_llm(dataset: Dict) -> Dict:
     return run_batch_baseline_plus_three_interventions(dataset)
 
 
-def run_hitl_level_1_human_rooting(
-    dataset: Dict, human_selected_roots: list[str] | None = None
-) -> Dict:
+def run_hitl_level_1_human_rooting(dataset: Dict, human_selected_roots: list[str] | None = None) -> Dict:
     """
     HITL Level 1: Human-Guided Rooting.
-
+    
     The LLM proposes root nodes, but a human selects the correct ones.
     This prevents error propagation from the start of BFS.
-
+    
     Args:
         human_selected_roots: If None, prompts user for input. Otherwise uses provided roots.
     """
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -338,12 +333,10 @@ def run_hitl_level_1_human_rooting(
         print(f"Available nodes: {nodes}")
         print(f"LLM proposed roots: {proposed_roots}")
         user_input = input("Enter correct root nodes (comma-separated): ")
-        selected_roots = [
-            r.strip() for r in user_input.split(",") if r.strip() in nodes
-        ]
+        selected_roots = [r.strip() for r in user_input.split(",") if r.strip() in nodes]
     else:
         selected_roots = [r for r in human_selected_roots if r in nodes]
-
+    
     print(f"[HITL-L1] Human selected roots: {selected_roots}")
     llm.usage.human_interventions += 1
 
@@ -385,14 +378,14 @@ def run_hitl_level_2_uncertainty_triggered(
 ) -> Dict:
     """
     HITL Level 2: Uncertainty-Triggered Human Intervention.
-
+    
     When LLM confidence is below threshold, the system can pause for human input.
-
+    
     Args:
         confidence_threshold: Edges with confidence below this trigger intervention.
         enable_human_input: If True, actually prompts human. If False, just flags them.
     """
-    llm = OpenRouterLLM(model="deepseek/deepseek-r1:free")
+    llm = GeminiLLM(model="gemini-2.5-flash", max_output_tokens=8192)
 
     nodes = dataset["nodes"]
     descriptions = dataset.get("descriptions")
@@ -402,7 +395,7 @@ def run_hitl_level_2_uncertainty_triggered(
 
     # Batch pruning with confidence tracking
     print(f"\n[HITL-L2] Using confidence threshold: {confidence_threshold}")
-
+    
     edges_list = sorted(list(baseline_edges))
     verdicts = llm.batch_verify_edges_direct(
         edges=edges_list,
@@ -437,19 +430,13 @@ def run_hitl_level_2_uncertainty_triggered(
 
         if confidence < confidence_threshold:
             uncertain_count += 1
-            print(
-                f"       *** TRIGGERING HUMAN INPUT (Conf < {confidence_threshold}) ***"
-            )
-
+            print(f"       *** TRIGGERING HUMAN INPUT (Conf < {confidence_threshold}) ***")
+            
             if enable_human_input:
-                user_input = (
-                    input(f"       Human decision - Keep this edge? (y/n): ")
-                    .strip()
-                    .lower()
-                )
+                user_input = input(f"       Human decision - Keep this edge? (y/n): ").strip().lower()
                 llm.usage.human_interventions += 1
-
-                if user_input == "y":
+                
+                if user_input == 'y':
                     pruned_edges.add((src, dst))
                     print(f"       [HUMAN-KEEP] {src} -> {dst}")
                 else:
@@ -462,13 +449,9 @@ def run_hitl_level_2_uncertainty_triggered(
         else:
             if keep:
                 pruned_edges.add((src, dst))
-                print(
-                    f"       [AUTO-KEEP] Confidence {confidence:.2f} >= {confidence_threshold}"
-                )
+                print(f"       [AUTO-KEEP] Confidence {confidence:.2f} >= {confidence_threshold}")
             else:
-                print(
-                    f"       [AUTO-REMOVE] Confidence {confidence:.2f} >= {confidence_threshold}"
-                )
+                print(f"       [AUTO-REMOVE] Confidence {confidence:.2f} >= {confidence_threshold}")
 
     print(f"\n[HITL-L2] Found {uncertain_count} uncertain edges")
 
@@ -482,7 +465,7 @@ def run_hitl_level_2_uncertainty_triggered(
         confidence_threshold=confidence_threshold,
     )
 
-    # Suggest missing edges to recover false negatives and boost recall
+    #Suggest missing edges to recover false negatives and boost recall
     completed_edges = suggest_missing_edges(
         edges=corrected_edges,
         nodes=nodes,
@@ -495,7 +478,7 @@ def run_hitl_level_2_uncertainty_triggered(
     return summarize_result(
         dataset_name=dataset["name"],
         method_name=f"hitl_level_2_uncertainty_threshold_{confidence_threshold}",
-        pred_edges=completed_edges,  # <--- FIXED!
+        pred_edges=completed_edges, # <--- FIXED!
         true_edges=true_edges,
         llm_calls=llm.usage.calls,
         cache_hits=llm.usage.cache_hits,
@@ -520,7 +503,7 @@ def main() -> None:
 
     # dataset = load_toy()
     # dataset = load_asia_placeholder()
-    dataset = load_asia_generated(n_samples=2000)
+    dataset = load_sachs_generated(n_samples=2000)
 
     # ========== ORIGINAL METHODS (ONE CALL PER EDGE) ==========
     # result = run_bfs_baseline(dataset)
@@ -536,16 +519,14 @@ def main() -> None:
     # ========== HITL TIERS ==========
     # Level 0: Pure LLM (same as batch baseline)
     # result = run_hitl_level_0_pure_llm(dataset)
-
+    
     # Level 1: Human-Guided Rooting (requires human input or pre-selected roots)
     # result = run_hitl_level_1_human_rooting(dataset)
     # result = run_hitl_level_1_human_rooting(dataset, human_selected_roots=["VisitAsia", "Smoking"])
-
+    
     # Level 2: Uncertainty-Triggered HITL (flags low-confidence edges)
     # result = run_hitl_level_2_uncertainty_triggered(dataset, confidence_threshold=0.7, enable_human_input=False)
-    result = run_hitl_level_2_uncertainty_triggered(
-        dataset, confidence_threshold=0.99, enable_human_input=True
-    )  # Interactive
+    result = run_hitl_level_2_uncertainty_triggered(dataset, confidence_threshold=0.99, enable_human_input=True)  # Interactive
 
     print("\n=== summary ===")
     print(json.dumps(result, indent=2))

@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "action": "flip",
+      "confidence": 1.0,
+      "edge": [
+        "Bronchitis",
+        "Smoking"
+      ],
+      "reason": "Smoking is a known cause of Bronchitis."
+    },
+    {
+      "action": "flip",
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "Smoking"
+      ],
+      "reason": "Smoking is a primary cause of LungCancer."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Tuberculosis",
+        "XRay"
+      ],
+      "reason": "Tuberculosis can cause abnormalities detectable by XRay."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Bronchitis",
+        "Dyspnea"
+      ],
+      "reason": "Bronchitis often causes shortness of breath (Dyspnea)."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "Dyspnea"
+      ],
+      "reason": "LungCancer can lead to shortness of breath (Dyspnea)."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "LungCancer",
+        "XRay"
+      ],
+      "reason": "LungCancer can cause abnormalities detectable by XRay."
+    }
+  ]
+}

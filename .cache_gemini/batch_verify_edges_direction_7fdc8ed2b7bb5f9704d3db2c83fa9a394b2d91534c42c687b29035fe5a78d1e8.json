@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Raf",
+        "Mek"
+      ],
+      "reason": "Raf directly phosphorylates and activates Mek in the MAPK/ERK pathway."
+    },
+    {
+      "action": "keep",
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "Raf"
+      ],
+      "reason": "PKA phosphorylates and regulates Raf activity."
+    },
+    {
+      "action": "keep",
+      "confidence": 0.9,
+      "edge": [
+        "PKC",
+        "Raf"
+      ],
+      "reason": "PKC phosphorylates and activates Raf."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Mek",
+        "Erk"
+      ],
+      "reason": "Mek directly phosphorylates and activates Erk in the MAPK/ERK pathway."
+    }
+  ]
+}
