@@ -1,0 +1,108 @@
+{
+  "results": [
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Mek",
+        "Erk"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Mek directly phosphorylates and activates Erk in the MAPK cascade."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "P38",
+        "PKC"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "P38 typically regulates PKC indirectly through other signaling components, not via direct phosphorylation."
+    },
+    {
+      "confidence": 0.8,
+      "edge": [
+        "PKA",
+        "Erk"
+      ],
+      "keep": false,
+      "mediators": [
+        "Raf"
+      ],
+      "reason": "PKA influences Erk activity indirectly, often by modulating upstream kinases like Raf."
+    },
+    {
+      "confidence": 0.8,
+      "edge": [
+        "PKA",
+        "Mek"
+      ],
+      "keep": false,
+      "mediators": [
+        "Raf"
+      ],
+      "reason": "PKA regulates Mek activity indirectly, primarily by modulating Raf."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "PKA",
+        "P38"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "PKA influences P38 activity indirectly through complex signaling networks."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "PKA",
+        "Raf"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "PKA directly phosphorylates and inhibits Raf in many cellular contexts."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "PKA",
+        "pjnk"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "PKA influences pjnk activity indirectly through complex signaling networks."
+    },
+    {
+      "confidence": 0.95,
+      "edge": [
+        "PKC",
+        "Raf"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "PKC directly phosphorylates and activates Raf, initiating the MAPK cascade."
+    },
+    {
+      "confidence": 1.0,
+      "edge": [
+        "Raf",
+        "Mek"
+      ],
+      "keep": true,
+      "mediators": [],
+      "reason": "Raf directly phosphorylates and activates Mek in the MAPK cascade."
+    },
+    {
+      "confidence": 0.7,
+      "edge": [
+        "pjnk",
+        "PKC"
+      ],
+      "keep": false,
+      "mediators": [],
+      "reason": "pjnk typically regulates PKC indirectly through other signaling components, not via direct phosphorylation."
+    }
+  ]
+}

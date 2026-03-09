@@ -1,0 +1,76 @@
+{
+  "results": [
+    {
+      "action": "remove",
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "Mek"
+      ],
+      "reason": "PKA's influence on Mek is primarily indirect, mediated by Raf."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Mek",
+        "Erk"
+      ],
+      "reason": "Mek directly phosphorylates and activates Erk."
+    },
+    {
+      "action": "remove",
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "pjnk"
+      ],
+      "reason": "PKA does not directly activate pjnk."
+    },
+    {
+      "action": "remove",
+      "confidence": 0.95,
+      "edge": [
+        "PKA",
+        "Erk"
+      ],
+      "reason": "PKA's effect on Erk is typically indirect, mediated by Raf and Mek."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "PKC",
+        "Raf"
+      ],
+      "reason": "PKC directly phosphorylates and activates Raf."
+    },
+    {
+      "action": "remove",
+      "confidence": 0.9,
+      "edge": [
+        "PKA",
+        "P38"
+      ],
+      "reason": "PKA does not directly activate P38."
+    },
+    {
+      "action": "keep",
+      "confidence": 1.0,
+      "edge": [
+        "Raf",
+        "Mek"
+      ],
+      "reason": "Raf directly phosphorylates and activates Mek."
+    },
+    {
+      "action": "keep",
+      "confidence": 0.95,
+      "edge": [
+        "PKA",
+        "Raf"
+      ],
+      "reason": "PKA directly phosphorylates and regulates Raf activity."
+    }
+  ]
+}
