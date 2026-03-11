@@ -404,6 +404,7 @@ def run_hitl_level_2_uncertainty_triggered(
     )
 
     pruned_edges = set()
+    human_kept_edges: Set[Edge] = set()  # track explicit human keeps
     uncertain_count = 0
 
     print(f"\n[DEBUG] Baseline returned {len(edges_list)} edges to evaluate.")
@@ -438,6 +439,7 @@ def run_hitl_level_2_uncertainty_triggered(
                 
                 if user_input == 'y':
                     pruned_edges.add((src, dst))
+                    human_kept_edges.add((src, dst))  # persist human override
                     print(f"       [HUMAN-KEEP] {src} -> {dst}")
                 else:
                     print(f"       [HUMAN-REMOVE] {src} -> {dst}")
@@ -464,6 +466,12 @@ def run_hitl_level_2_uncertainty_triggered(
         verbose=True,
         confidence_threshold=confidence_threshold,
     )
+
+    # Restore edges the human explicitly kept that direction correction dropped
+    for src, dst in human_kept_edges:
+        if (src, dst) not in corrected_edges and (dst, src) not in corrected_edges:
+            corrected_edges.add((src, dst))
+            print(f"[HUMAN-RESTORE] {src} -> {dst} (human override preserved)")
 
     #Suggest missing edges to recover false negatives and boost recall
     completed_edges = suggest_missing_edges(
@@ -496,14 +504,14 @@ def save_result(result: Dict) -> None:
 
     print(f"\nsaved -> {path}")
 
-
+   
 def main() -> None:
     if not os.getenv("GEMINI_API_KEY"):
         raise RuntimeError("set GEMINI_API_KEY before running.")
 
     # dataset = load_toy()
     # dataset = load_asia_placeholder()
-    dataset = load_sachs_generated(n_samples=2000)
+    dataset = load_sachs_generated(n_samples=5000)
 
     # ========== ORIGINAL METHODS (ONE CALL PER EDGE) ==========
     # result = run_bfs_baseline(dataset)
@@ -514,7 +522,7 @@ def main() -> None:
 
     # ========== BATCH METHODS (5-10x API REDUCTION) ==========
     # result = run_batch_baseline_plus_two_interventions(dataset)
-    result = run_batch_baseline_plus_three_interventions(dataset)
+    #result = run_batch_baseline_plus_three_interventions(dataset)
 
     # ========== HITL TIERS ==========
     # Level 0: Pure LLM (same as batch baseline)

@@ -1,0 +1,147 @@
+{
+  "dataset": "sachs_5000",
+  "method": "hitl_level_2_uncertainty_threshold_0.99",
+  "n_true_edges": 11,
+  "n_pred_edges": 14,
+  "pred_edges": [
+    [
+      "Erk",
+      "P38"
+    ],
+    [
+      "Erk",
+      "pjnk"
+    ],
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "P38",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ],
+    [
+      "pjnk",
+      "Raf"
+    ]
+  ],
+  "true_edges": [
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "PKA"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ]
+  ],
+  "fp_edges": [
+    [
+      "Erk",
+      "P38"
+    ],
+    [
+      "Erk",
+      "pjnk"
+    ],
+    [
+      "P38",
+      "Raf"
+    ],
+    [
+      "pjnk",
+      "Raf"
+    ]
+  ],
+  "fn_edges": [
+    [
+      "PKC",
+      "PKA"
+    ]
+  ],
+  "f1": {
+    "precision": 0.7142857142857143,
+    "recall": 0.9090909090909091,
+    "f1": 0.8,
+    "tp": 10.0,
+    "fp": 4.0,
+    "fn": 1.0
+  },
+  "shd": 5,
+  "llm_calls": 3,
+  "cache_hits": 0,
+  "human_interventions": 8,
+  "total_api_calls": 3
+}

@@ -1,0 +1,131 @@
+{
+  "dataset": "sachs_2000",
+  "method": "batch_causal_baseline_plus_pruning_plus_direction_plus_missing",
+  "n_true_edges": 11,
+  "n_pred_edges": 6,
+  "pred_edges": [
+    [
+      "Erk",
+      "Mek"
+    ],
+    [
+      "Erk",
+      "Raf"
+    ],
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ]
+  ],
+  "true_edges": [
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "PKA"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ]
+  ],
+  "fp_edges": [
+    [
+      "Erk",
+      "Mek"
+    ],
+    [
+      "Erk",
+      "Raf"
+    ]
+  ],
+  "fn_edges": [
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "PKA"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ]
+  ],
+  "f1": {
+    "precision": 0.6666666666666666,
+    "recall": 0.36363636363636365,
+    "f1": 0.4705882352941177,
+    "tp": 4.0,
+    "fp": 2.0,
+    "fn": 7.0
+  },
+  "shd": 9,
+  "llm_calls": 3,
+  "cache_hits": 0,
+  "human_interventions": 0,
+  "total_api_calls": 3
+}

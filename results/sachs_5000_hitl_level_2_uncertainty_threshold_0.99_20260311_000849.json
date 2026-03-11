@@ -1,0 +1,123 @@
+{
+  "dataset": "sachs_5000",
+  "method": "hitl_level_2_uncertainty_threshold_0.99",
+  "n_true_edges": 11,
+  "n_pred_edges": 10,
+  "pred_edges": [
+    [
+      "Erk",
+      "Raf"
+    ],
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ]
+  ],
+  "true_edges": [
+    [
+      "Mek",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Erk"
+    ],
+    [
+      "PKA",
+      "Mek"
+    ],
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKA",
+      "Raf"
+    ],
+    [
+      "PKA",
+      "pjnk"
+    ],
+    [
+      "PKC",
+      "P38"
+    ],
+    [
+      "PKC",
+      "PKA"
+    ],
+    [
+      "PKC",
+      "Raf"
+    ],
+    [
+      "PKC",
+      "pjnk"
+    ],
+    [
+      "Raf",
+      "Mek"
+    ]
+  ],
+  "fp_edges": [
+    [
+      "Erk",
+      "Raf"
+    ]
+  ],
+  "fn_edges": [
+    [
+      "PKA",
+      "P38"
+    ],
+    [
+      "PKC",
+      "PKA"
+    ]
+  ],
+  "f1": {
+    "precision": 0.9,
+    "recall": 0.8181818181818182,
+    "f1": 0.8571428571428572,
+    "tp": 9.0,
+    "fp": 1.0,
+    "fn": 2.0
+  },
+  "shd": 3,
+  "llm_calls": 2,
+  "cache_hits": 1,
+  "human_interventions": 8,
+  "total_api_calls": 2
+}

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 from .llm_interface import GeminiLLM
 
@@ -271,3 +271,82 @@ def batch_correct_edge_directions(
             print(f"  {src} -> {dst} action={action} (confidence={conf:.2f})")
     
     return corrected_edges
+
+
+def hitl_uncertainty_filter_edges(
+    edges: Set[Edge],
+    nodes: List[str],
+    llm: GeminiLLM,
+    descriptions: Dict[str, str] | None = None,
+    confidence_threshold: float = 0.95,
+    enable_human_input: bool = True,
+    verbose: bool = True,
+    input_fn: Callable[[str], str] = input,
+) -> Tuple[Set[Edge], int, int]:
+    """
+    HITL uncertainty filter for edge pruning.
+
+    Returns:
+        final_edges, llm_calls, human_interventions
+    """
+    current_edges = set(edges)
+    edges_to_remove: Set[Edge] = set()
+    edges_to_keep: Set[Edge] = set()  # critical: explicit keep set
+    llm_calls = 0
+    human_interventions = 0
+
+    for src, dst in sorted(current_edges):
+        verdict = llm.verify_edge_direct(src, dst, nodes, descriptions=descriptions)
+        llm_calls += 1
+
+        keep = verdict.get("keep", True)
+        confidence = float(verdict.get("confidence", 1.0))
+        reason = verdict.get("reason", "")
+
+        if verbose:
+            print(f"\n[EVAL] {src} -> {dst}")
+            print(f"       LLM says Keep = {keep}")
+            print(f"       LLM Confidence = {confidence:.2f}")
+            if reason:
+                print(f"       Reason: {reason}")
+
+        if confidence >= confidence_threshold:
+            if keep:
+                edges_to_keep.add((src, dst))
+                if verbose:
+                    print(f"       [AUTO-KEEP] Confidence {confidence:.2f} >= {confidence_threshold}")
+            else:
+                edges_to_remove.add((src, dst))
+                if verbose:
+                    print(f"       [AUTO-REMOVE] Confidence {confidence:.2f} >= {confidence_threshold}")
+            continue
+
+        # low confidence => HITL
+        human_interventions += 1
+        if verbose:
+            print(f"       *** TRIGGERING HUMAN INPUT (Conf < {confidence_threshold}) ***")
+
+        if enable_human_input:
+            ans = input_fn("       Human decision - Keep this edge? (y/n): ").strip().lower()
+            if ans == "y":
+                edges_to_keep.add((src, dst))  # critical: persist human keep
+                if verbose:
+                    print(f"       [HUMAN-KEEP] {src} -> {dst}")
+            else:
+                edges_to_remove.add((src, dst))
+                if verbose:
+                    print(f"       [HUMAN-REMOVE] {src} -> {dst}")
+        else:
+            # non-interactive fallback
+            if keep:
+                edges_to_keep.add((src, dst))
+                if verbose:
+                    print(f"       [AUTO-DECIDE] {src} -> {dst} (keep=True)")
+            else:
+                edges_to_remove.add((src, dst))
+                if verbose:
+                    print(f"       [AUTO-DECIDE] {src} -> {dst} (keep=False)")
+
+    # critical: union with explicit keeps so human overrides are never lost
+    final_edges = (current_edges - edges_to_remove) | edges_to_keep
+    return final_edges, llm_calls, human_interventions

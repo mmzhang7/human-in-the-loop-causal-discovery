@@ -187,27 +187,6 @@ Configuration details:
 
 Caching ensures that repeated experiment runs reuse previous responses rather than making additional API calls.
 
-### Parallel-safe 429 configuration
-
-The project now uses a shared cross-process rate limiter, so multiple parallel experiment processes coordinate request timing instead of bursting independently.
-
-Recommended environment variables:
-
-```bash
-GEMINI_REQUESTS_PER_MINUTE=3
-GEMINI_RATE_LIMIT_WINDOW_SECONDS=60
-GEMINI_MIN_REQUEST_INTERVAL_SECONDS=20
-GEMINI_QUEUE_MIN_INTERVAL_SECONDS=20
-GEMINI_RATE_LIMIT_NAMESPACE=hitl-default
-```
-
-Notes:
-- `GEMINI_REQUESTS_PER_MINUTE` and `GEMINI_RATE_LIMIT_WINDOW_SECONDS` define the shared sliding-window limit.
-- `GEMINI_MIN_REQUEST_INTERVAL_SECONDS` enforces minimum spacing between calls.
-- `GEMINI_QUEUE_MIN_INTERVAL_SECONDS` controls in-process queue spacing (defaults to `GEMINI_MIN_REQUEST_INTERVAL_SECONDS` if unset).
-- `GEMINI_RATE_LIMIT_NAMESPACE` should be the same for jobs that share one API quota, and different across unrelated quotas.
-- If the server returns `429`/`RESOURCE_EXHAUSTED` with a retry delay, that backoff is propagated to all parallel processes in the same namespace.
-
 ---
 
 ## DAG Constraints
